@@ -1,0 +1,48 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import IndexView from '../views/IndexView.vue'
+import LoginView from '../views/LoginView.vue'
+import AdminLayout from '../layout/AdminLayout.vue'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: IndexView,
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+    },
+    {
+      path: '/dashboard',
+      component: AdminLayout,
+      // redirect: '/dashboard/detection', // 默认跳转到检测页
+      children: [
+        {
+          path: '',
+          redirect: { name: 'detection' }
+        },
+        {
+          path: 'detection',
+          name: 'detection',
+          component: () => import('../views/dashboard/AnomalyDetection.vue'),
+        },
+        {
+          path: 'statistics',
+          name: 'statistics',
+          component: () => import('../views/dashboard/DataStatistics.vue'),
+        },
+        {
+          path: 'profile',
+          name: 'profile',
+          component: () => import('../views/dashboard/UserProfile.vue'),
+        }
+      ]
+    }
+  ],
+})
+
+export default router
