@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { logout } from '@/api/login_api'
 
 const router = useRouter()
 const route = useRoute()
@@ -57,8 +58,11 @@ const currentRouteName = computed(() => {
   }
 })
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  await logout()
   // 清除token等逻辑
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
   router.push('/login')
 }
 </script>

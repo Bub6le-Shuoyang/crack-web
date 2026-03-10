@@ -15,7 +15,7 @@
           <p class="description">负责系统日常维护与异常检测监控。</p>
         </div>
       </div>
-      
+
       <div class="profile-body">
         <div class="info-group">
           <label>用户 ID</label>
@@ -66,7 +66,7 @@ h2 {
 .profile-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   padding: 40px;
   max-width: 800px;
   margin: 0 auto;
@@ -156,7 +156,8 @@ h2 {
   gap: 16px;
 }
 
-.edit-btn, .password-btn {
+.edit-btn,
+.password-btn {
   padding: 10px 24px;
   border-radius: 6px;
   font-size: 1rem;
