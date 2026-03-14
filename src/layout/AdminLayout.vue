@@ -15,6 +15,14 @@
         <router-link to="/dashboard/profile" class="nav-item" active-class="active">
           <span class="icon">👤</span> 个人信息中心
         </router-link>
+        <router-link
+          v-if="isAdmin"
+          to="/dashboard/user-management"
+          class="nav-item"
+          active-class="active"
+        >
+          <span class="icon">👥</span> 用户管理
+        </router-link>
       </nav>
     </aside>
 
@@ -24,7 +32,7 @@
       <header class="topbar">
         <div class="breadcrumb">管理系统 / {{ currentRouteName }}</div>
         <div class="user-info">
-          <span>管理员</span>
+          <span>{{ isAdmin ? '管理员' : '普通用户' }}</span>
           <button @click="handleLogout" class="logout-btn">退出</button>
         </div>
       </header>
@@ -38,12 +46,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { logout } from '@/api/login_api'
 
 const router = useRouter()
 const route = useRoute()
+const isAdmin = ref(false)
+
+onMounted(() => {
+  const userStr = localStorage.getItem('user')
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr)
+      // Check roleid (handling both string '2' and number 2, and potential field names)
+      if (user.roleid == '2' || user.role_id == '2') {
+        isAdmin.value = true
+      }
+    } catch (e) {
+      console.error('Failed to parse user info', e)
+    }
+  }
+})
 
 const currentRouteName = computed(() => {
   switch (route.name) {
@@ -53,6 +77,8 @@ const currentRouteName = computed(() => {
       return '数据统计仪表盘'
     case 'profile':
       return '个人信息中心'
+    case 'user-management':
+      return '用户管理'
     default:
       return '首页'
   }
