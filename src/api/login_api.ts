@@ -94,9 +94,10 @@ export const login = async (data: LoginRequest): Promise<LoginResponse> => {
   try {
     const response = await apiClient.post<LoginResponse>('/api/user/login', data)
     return response.data
-  } catch (error: any) {
-    if (error.response && error.response.data) {
-      return error.response.data
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: LoginResponse } }
+    if (err.response && err.response.data) {
+      return err.response.data
     }
     throw error
   }
@@ -109,9 +110,10 @@ export const sendVerificationCode = async (email: string): Promise<SendCodeRespo
       email,
     })
     return response.data
-  } catch (error: any) {
-    if (error.response && error.response.data) {
-      return error.response.data
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: SendCodeResponse } }
+    if (err.response && err.response.data) {
+      return err.response.data
     }
     throw error
   }
@@ -122,9 +124,10 @@ export const register = async (data: RegisterRequest): Promise<RegisterResponse>
   try {
     const response = await apiClient.post<RegisterResponse>('/api/user/register', data)
     return response.data
-  } catch (error: any) {
-    if (error.response && error.response.data) {
-      return error.response.data
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: RegisterResponse } }
+    if (err.response && err.response.data) {
+      return err.response.data
     }
     throw error
   }
@@ -135,9 +138,10 @@ export const resetPassword = async (data: ForgotPasswordRequest): Promise<Forgot
   try {
     const response = await apiClient.post<ForgotPasswordResponse>('/api/user/forgot-password', data)
     return response.data
-  } catch (error: any) {
-    if (error.response && error.response.data) {
-      return error.response.data
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: ForgotPasswordResponse } }
+    if (err.response && err.response.data) {
+      return err.response.data
     }
     throw error
   }
@@ -148,7 +152,7 @@ export const logout = async (): Promise<LogoutResponse> => {
   try {
     const response = await apiClient.post<LogoutResponse>('/api/user/logout', {})
     return response.data
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Logout failed:', error)
     return { ok: false }
   }

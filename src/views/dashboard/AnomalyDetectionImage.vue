@@ -35,22 +35,50 @@
           >
             批量检测 ({{ selectedImageIds.length }})
           </el-button>
-        </div>
 
-        <div class="right-actions">
           <el-button
             :icon="Refresh"
             circle
             @click="loadImages"
             :loading="loading"
             title="刷新列表"
+            style="margin-left: 12px"
           />
+        </div>
+
+        <div class="center-actions">
+          <div class="filter-wrapper">
+            <el-button-group class="filter-group">
+              <el-button
+                v-for="label in ['P0', 'P1', 'P2', 'P3']"
+                :key="label"
+                :type="selectedLabel === label ? 'primary' : 'default'"
+                size="default"
+                @click="handleFilterLabel(label)"
+              >
+                {{ label }}
+              </el-button>
+            </el-button-group>
+            <el-button
+              v-if="selectedLabel"
+              type="info"
+              link
+              @click="handleFilterLabel('')"
+              class="clear-filter-btn"
+              >清除筛选</el-button
+            >
+          </div>
+        </div>
+
+        <div class="right-actions">
           <el-input
             v-model="searchKeyword"
             placeholder="搜索图片名称..."
             class="search-input"
             clearable
             :prefix-icon="Search"
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
           />
         </div>
       </div>
@@ -59,20 +87,10 @@
     <!-- 图片展示区域 -->
     <div class="content-wrapper" v-loading="loading">
       <div class="image-grid-container">
-        <el-empty v-if="filteredImages.length === 0" description="暂无图片数据" />
+        <el-empty v-if="images.length === 0" description="暂无图片数据" />
 
         <el-row :gutter="20" v-else>
-          <el-col
-            v-for="img in filteredImages"
-            :key="img.id"
-            :xs="24"
-            :sm="12"
-            :md="8"
-            :lg="6"
-            :xl="4"
-            class="image-col"
-          >
-            <!-- ... existing card code ... -->
+          <el-col v-for="img in images" :key="img.id" v-bind="gridConfig" class="image-col">
             <el-card
               class="image-card"
               :class="{ 'is-selected': selectedImageIds.includes(img.id) }"
@@ -83,10 +101,19 @@
               <div
                 class="image-wrapper"
                 v-loading="img.loading"
-                element-loading-text="检测中..."
+                :element-loading-text="img.status === 'detected' ? '检测中...' : '加载中...'"
                 element-loading-background="rgba(255, 255, 255, 0.7)"
                 @click.stop="toggleSelection(img.id)"
+                :style="{ height: pageSize <= 4 ? '350px' : pageSize <= 8 ? '250px' : '200px' }"
               >
+                <!-- 结果标签显示在左上角 -->
+                <div
+                  v-if="img.status === 'detected' && img.results && img.results.length > 0"
+                  class="detection-label-overlay"
+                >
+                  {{ Array.from(new Set(img.results.map((r) => r.label))).join(', ') }}
+                </div>
+
                 <el-image
                   :src="img.url"
                   fit="cover"
@@ -161,11 +188,13 @@
       <!-- 分页组件固定在底部 -->
       <div class="pagination-wrapper">
         <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[4, 8, 12]"
           background
-          layout="prev, pager, next, jumper, total"
+          layout="total, sizes, prev, pager, next, jumper"
           :total="total"
-          :page-size="pageSize"
-          :current-page="currentPage"
+          @size-change="handleSizeChange"
           @current-change="handlePageChange"
         />
       </div>
@@ -287,6 +316,7 @@ interface ImageItem {
 // 状态
 const loading = ref(false)
 const searchKeyword = ref('')
+const selectedLabel = ref('')
 const selectedImageIds = ref<number[]>([])
 const images = ref<ImageItem[]>([])
 const detailVisible = ref(false)
@@ -294,8 +324,19 @@ const currentImage = ref<ImageItem | null>(null)
 
 // 分页状态
 const currentPage = ref(1)
-const pageSize = ref(18)
+const pageSize = ref(8) // 默认 8
 const total = ref(0)
+
+// 响应式网格配置
+const gridConfig = computed(() => {
+  if (pageSize.value <= 4) {
+    return { xs: 24, sm: 24, md: 12, lg: 12, xl: 6 } // 较大，每行 2-4 个
+  } else if (pageSize.value <= 8) {
+    return { xs: 24, sm: 12, md: 8, lg: 6, xl: 4 } // 中等，每行 4-6 个
+  } else {
+    return { xs: 24, sm: 12, md: 6, lg: 4, xl: 3 } // 较小，每行 6-8 个
+  }
+})
 
 // 数据初始化
 onMounted(() => {
@@ -308,48 +349,51 @@ const loadImages = async () => {
     const res = await DetectionApi.listImages({
       page: currentPage.value,
       pageSize: pageSize.value,
+      keyword: searchKeyword.value,
+      label: selectedLabel.value,
     })
 
     if (res.ok && res.data) {
       const list = res.data.list
       total.value = res.data.total
 
-      // 这里的 list 只有基础信息，需要补充检测详情
-      // 如果后端 listImages 不返回检测结果，我们可能需要单独查
-      // 但为了性能，最好是 listImages 直接返回检测状态
-      // 目前 listImages 只返回了 Image 实体。
-      // 我们需要在 listImages 接口里关联查询 detection status 吗？
-      // 或者，我们依然遍历 fetch details？
-      // 鉴于 listImages 只有分页的 10 条，遍历 fetch 也是可以接受的。
-      // 为了用户体验，我们先显示列表，然后异步加载状态？
-      // 或者直接 Promise.all 加载详情。
+      // 异步加载详情，不阻塞列表渲染
+      images.value = list.map((item) => ({
+        id: item.id || item.imageId || 0,
+        url: '', // 初始为空，由详情接口补充
+        name: item.fileName,
+        date: new Date(item.createdAt).toLocaleDateString('zh-CN'),
+        status: 'pending',
+        loading: true, // 单个卡片的加载状态
+      }))
 
-      // 暂时采用 Promise.all 加载详情的方式，确保信息完整
-      // 注意：后端返回的 list 中的实体对象主键通常是 id，而不是 imageId
-      // 使用 unknown 类型断言来避免 any
-      const promises = list.map((item: unknown) => {
-        const img = item as { id: number; imageId?: number }
-        return DetectionApi.getImageById(img.id || img.imageId || 0)
-      })
-      const details = await Promise.all(promises)
-
-      images.value = details
-        .filter((d) => d.ok && d.data)
-        .map((d) => {
-          const item = d.data!
-          return {
-            id: item.imageId,
-            url: item.accessUrl || item.base64Content || '',
-            name: item.fileName,
-            date: new Date(item.createdAt).toLocaleDateString('zh-CN'),
-            status: (item.isDetected ? 'detected' : 'pending') as 'detected' | 'pending',
-            results: item.results || [],
-            detectionDate: item.detectionDate,
-            modelName: item.modelName,
-            width: item.width,
-            height: item.height,
+      // 逐个获取详情并更新
+      list.forEach(async (item, index) => {
+        try {
+          const imageId = item.id || item.imageId || 0
+          const detailRes = await DetectionApi.getImageById(imageId)
+          if (detailRes.ok && detailRes.data) {
+            const detail = detailRes.data
+            // 确保索引仍然匹配（如果页面已翻页，这可能会有问题，但在简单的 loadImages 中通常 OK）
+            if (images.value[index] && images.value[index].id === imageId) {
+              images.value[index] = {
+                ...images.value[index],
+                url: detail.accessUrl || detail.base64Content || '',
+                status: detail.isDetected ? 'detected' : 'pending',
+                results: detail.results || [],
+                detectionDate: detail.detectionDate,
+                modelName: detail.modelName,
+                width: detail.width,
+                height: detail.height,
+                loading: false,
+              }
+            }
           }
-        })
+        } catch (err) {
+          console.error(`Failed to load detail for image ${item.id}`, err)
+          if (images.value[index]) images.value[index].loading = false
+        }
+      })
     } else {
       ElMessage.error(res.message || '获取图片列表失败')
     }
@@ -366,13 +410,25 @@ const handlePageChange = (page: number) => {
   loadImages()
 }
 
-// 计算属性
-const filteredImages = computed(() => {
-  if (!searchKeyword.value) return images.value
-  return images.value.filter((img) =>
-    img.name.toLowerCase().includes(searchKeyword.value.toLowerCase()),
-  )
-})
+const handleSizeChange = (size: number) => {
+  pageSize.value = size
+  currentPage.value = 1
+  loadImages()
+}
+
+const handleSearch = () => {
+  currentPage.value = 1
+  loadImages()
+}
+
+const handleFilterLabel = (label: string) => {
+  selectedLabel.value = label
+  currentPage.value = 1
+  loadImages()
+}
+
+// 计算属性 (移除旧的本地过滤)
+// const filteredImages = computed(() => { ... })
 
 // 方法
 const handleUploadFile = async (file: UploadFile) => {
@@ -549,7 +605,7 @@ const handleBatchDetect = async () => {
   const successCount = results.filter((r) => r.success).length
 
   if (successCount > 0) {
-    ElMessage.success(`批量检测结束，${successCount} 张图片处理完成，共发现 ${totalIssues} 处异常`)
+    ElMessage.success(`批量检测完成：已处理 ${successCount} 张图片，共发现 ${totalIssues} 处异常`)
   } else {
     ElMessage.warning('批量检测未成功处理任何图片')
   }
@@ -566,13 +622,13 @@ const resetImageTransform = () => {
 }
 
 const handleWheel = (e: WheelEvent) => {
-  e.preventDefault()
+  // 模板中已使用 @wheel.prevent，此处不需要 e.preventDefault()
   const scaleBy = 1.1
   const oldScale = imageScale.value
   const newScale = e.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy
 
-  // 限制缩放范围
-  if (newScale < 0.1 || newScale > 5) return
+  // 限制缩放范围 (0.1x 到 10x)
+  if (newScale < 0.1 || newScale > 10) return
 
   imageScale.value = newScale
 }
@@ -629,14 +685,72 @@ const viewDetail = (img: ImageItem) => {
   align-items: center;
 }
 
+.center-actions {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.filter-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%; /* 确保高度撑满以便垂直居中 */
+}
+
+.filter-group {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+}
+
+.clear-filter-btn {
+  margin-left: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  height: 32px; /* 与 Element 默认按钮高度对齐 */
+  line-height: 1;
+}
+
+.right-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .search-input {
   width: 250px;
 }
 
-.content-wrapper {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 160px); /* 减去顶部栏和header的高度 */
+.image-wrapper {
+  position: relative;
+  overflow: hidden;
+  background-color: #f0f2f5;
+  cursor: pointer;
+  transition: height 0.3s ease;
+}
+
+.detection-label-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  background-color: rgba(255, 0, 0, 0.85);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.image-thumb {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .image-grid-container {
@@ -659,6 +773,26 @@ const viewDetail = (img: ImageItem) => {
   margin-bottom: 20px;
 }
 
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 160px); /* 减去顶部栏和header的高度 */
+}
+
+.image-grid-container {
+  flex: 1; /* 让图片网格占据剩余空间 */
+  min-height: 400px;
+}
+
+.pagination-wrapper {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  background-color: #fff;
+  border-top: 1px solid #ebeef5;
+}
+
 .image-card {
   position: relative;
   cursor: pointer;
@@ -676,19 +810,6 @@ const viewDetail = (img: ImageItem) => {
   background-color: #f0f9eb;
   position: relative;
   z-index: 1;
-}
-
-.image-wrapper {
-  position: relative;
-  height: 200px;
-  overflow: hidden;
-  background-color: #eee;
-}
-
-.image-thumb {
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 .image-slot {

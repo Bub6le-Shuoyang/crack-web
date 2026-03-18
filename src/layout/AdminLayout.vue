@@ -6,8 +6,11 @@
         <h2>Crack Admin</h2>
       </div>
       <nav class="sidebar-nav">
-        <router-link to="/dashboard/detection" class="nav-item" active-class="active">
-          <span class="icon">🛣️</span> 道路异常检测
+        <router-link to="/dashboard/detection-image" class="nav-item" active-class="active">
+          <span class="icon">🖼️</span> 道路异常检测-图片
+        </router-link>
+        <router-link to="/dashboard/detection-video" class="nav-item" active-class="active">
+          <span class="icon">🎥</span> 道路异常检测-视频
         </router-link>
         <router-link to="/dashboard/statistics" class="nav-item" active-class="active">
           <span class="icon">📊</span> 数据统计仪表盘
@@ -71,8 +74,10 @@ onMounted(() => {
 
 const currentRouteName = computed(() => {
   switch (route.name) {
-    case 'detection':
-      return '道路异常检测'
+    case 'detection-image':
+      return '道路异常检测-图片'
+    case 'detection-video':
+      return '道路异常检测-视频'
     case 'statistics':
       return '数据统计仪表盘'
     case 'profile':

@@ -49,7 +49,8 @@ export interface UploadImageResponse {
 }
 
 export interface ImageItem {
-  imageId: number
+  id: number
+  imageId?: number // 兼容旧代码
   fileName: string
   filePath: string
   fileSize: number
@@ -155,7 +156,13 @@ export const uploadImage = async (file: File): Promise<UploadImageResponse> => {
 }
 
 // 2. 获取用户图片列表
-export const listImages = async (params?: Record<string, unknown>): Promise<ImageListResponse> => {
+export const listImages = async (params?: {
+  page?: number
+  pageSize?: number
+  fileType?: string
+  keyword?: string
+  label?: string
+}): Promise<ImageListResponse> => {
   const response = await apiClient.get<ImageListResponse>('/api/file/list-images', { params })
   return response.data
 }
@@ -174,9 +181,7 @@ export const getImageIds = async (): Promise<GetImageIdsResponse> => {
 
 // 5. 根据ID获取图片详情（含访问链接）
 export const getImageById = async (imageId: number): Promise<ImageDetailResponse> => {
-  const response = await apiClient.get<ImageDetailResponse>(
-    `/api/file/get-image-by-id/${imageId}`,
-  )
+  const response = await apiClient.get<ImageDetailResponse>(`/api/file/get-image-by-id/${imageId}`)
   return response.data
 }
 
@@ -206,4 +211,3 @@ export const detectSingle = async (file: File): Promise<SingleDetectResponse> =>
   })
   return response.data
 }
-

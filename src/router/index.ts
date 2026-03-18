@@ -26,9 +26,18 @@ const router = createRouter({
           redirect: { name: 'detection' },
         },
         {
+          path: 'detection-image',
+          name: 'detection-image',
+          component: () => import('../views/dashboard/AnomalyDetectionImage.vue'),
+        },
+        {
+          path: 'detection-video',
+          name: 'detection-video',
+          component: () => import('../views/dashboard/AnomalyDetectionVideo.vue'),
+        },
+        {
           path: 'detection',
-          name: 'detection',
-          component: () => import('../views/dashboard/AnomalyDetection.vue'),
+          redirect: { name: 'detection-image' },
         },
         {
           path: 'statistics',
