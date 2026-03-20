@@ -43,7 +43,9 @@
               :inactive-value="0"
               active-color="#13ce66"
               inactive-color="#ff4949"
-              @change="(val: number | string | boolean) => handleStatusChange(scope.row, Number(val))"
+              @change="
+                (val: number | string | boolean) => handleStatusChange(scope.row, Number(val))
+              "
             />
           </template>
         </el-table-column>
@@ -138,9 +140,21 @@ import { Search } from '@element-plus/icons-vue'
 import { listUsers, updateUser, changeUserStatus, resetPassword } from '@/api/admin_api'
 import type { FormInstance, FormRules } from 'element-plus'
 
+// 定义用户类型
+interface User {
+  userId: number | string
+  name: string
+  email: string
+  roleId: string | number
+  roleName: string
+  status: number
+  lastLoginAt: string | null
+  createdAt: string | null
+}
+
 // 列表数据
 const loading = ref(false)
-const userList = ref<any[]>([])
+const userList = ref<User[]>([])
 const totalUsers = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -161,7 +175,7 @@ const fetchUsers = async () => {
     } else {
       ElMessage.error(res.message || '获取用户列表失败')
     }
-  } catch (error: any) {
+  } catch {
     ElMessage.error('网络错误或无权限')
   } finally {
     loading.value = false
@@ -189,7 +203,7 @@ const handleCurrentChange = (val: number) => {
 }
 
 // 状态切换（启用/禁用）
-const handleStatusChange = async (row: any, val: number) => {
+const handleStatusChange = async (row: User, val: number) => {
   try {
     const res = await changeUserStatus(row.userId, val)
     if (res.ok) {
@@ -199,7 +213,7 @@ const handleStatusChange = async (row: any, val: number) => {
       row.status = val === 1 ? 0 : 1
       ElMessage.error(res.message || '修改失败')
     }
-  } catch (error) {
+  } catch {
     row.status = val === 1 ? 0 : 1
     ElMessage.error('网络错误')
   }
@@ -210,7 +224,7 @@ const editDialogVisible = ref(false)
 const submitting = ref(false)
 const editFormRef = ref<FormInstance>()
 const editForm = reactive({
-  userId: '',
+  userId: '' as string | number,
   name: '',
   email: '',
   roleId: '1',
@@ -224,7 +238,7 @@ const rules = reactive<FormRules>({
   roleId: [{ required: true, message: '请选择角色', trigger: 'change' }],
 })
 
-const openEditDialog = (row: any) => {
+const openEditDialog = (row: User) => {
   editForm.userId = row.userId
   editForm.name = row.name
   editForm.email = row.email
@@ -250,7 +264,7 @@ const submitEdit = async () => {
         } else {
           ElMessage.error(res.message || '修改失败')
         }
-      } catch (error) {
+      } catch {
         ElMessage.error('网络错误')
       } finally {
         submitting.value = false
@@ -263,7 +277,7 @@ const submitEdit = async () => {
 const resetPwdDialogVisible = ref(false)
 const resetPwdFormRef = ref<FormInstance>()
 const resetPwdForm = reactive({
-  userId: '',
+  userId: '' as string | number,
   newPassword: '',
 })
 const resetRules = reactive<FormRules>({
@@ -273,7 +287,7 @@ const resetRules = reactive<FormRules>({
   ],
 })
 
-const openResetPasswordDialog = (row: any) => {
+const openResetPasswordDialog = (row: User) => {
   resetPwdForm.userId = row.userId
   resetPwdForm.newPassword = ''
   resetPwdDialogVisible.value = true
@@ -298,7 +312,7 @@ const submitResetPassword = async () => {
             } else {
               ElMessage.error(res.message || '重置失败')
             }
-          } catch (error) {
+          } catch {
             ElMessage.error('网络错误')
           } finally {
             submitting.value = false
