@@ -15,9 +15,6 @@
         <router-link to="/dashboard/statistics" class="nav-item" active-class="active">
           <span class="icon">📊</span> 数据统计仪表盘
         </router-link>
-        <router-link to="/dashboard/profile" class="nav-item" active-class="active">
-          <span class="icon">👤</span> 个人信息中心
-        </router-link>
         <router-link
           v-if="isAdmin"
           to="/dashboard/user-management"
@@ -25,6 +22,9 @@
           active-class="active"
         >
           <span class="icon">👥</span> 用户管理
+        </router-link>
+        <router-link to="/dashboard/profile" class="nav-item" active-class="active">
+          <span class="icon">👤</span> 个人信息中心
         </router-link>
       </nav>
     </aside>
@@ -35,7 +35,7 @@
       <header class="topbar">
         <div class="breadcrumb">管理系统 / {{ currentRouteName }}</div>
         <div class="user-info">
-          <span>{{ isAdmin ? '管理员' : '普通用户' }}</span>
+          <span>{{ userName }}</span>
           <button @click="handleLogout" class="logout-btn">退出</button>
         </div>
       </header>
@@ -56,6 +56,7 @@ import { logout } from '@/api/login_api'
 const router = useRouter()
 const route = useRoute()
 const isAdmin = ref(false)
+const userName = ref('')
 
 onMounted(() => {
   const userStr = localStorage.getItem('user')
@@ -66,6 +67,7 @@ onMounted(() => {
       if (user.roleid == '2' || user.role_id == '2') {
         isAdmin.value = true
       }
+      userName.value = user.name || (isAdmin.value ? '管理员' : '普通用户')
     } catch (e) {
       console.error('Failed to parse user info', e)
     }
