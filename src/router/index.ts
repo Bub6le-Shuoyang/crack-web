@@ -23,7 +23,7 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: { name: 'detection' },
+          redirect: { name: 'detection-image' },
         },
         {
           path: 'detection-image',
