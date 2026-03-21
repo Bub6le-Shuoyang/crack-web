@@ -333,12 +333,6 @@ const handlePageChange = (page: number) => {
   loadVideos()
 }
 
-const handleSizeChange = (size: number) => {
-  pageSize.value = size
-  currentPage.value = 1
-  loadVideos()
-}
-
 const customUpload = async (options: UploadRequestOptions) => {
   uploading.value = true
   try {
@@ -366,7 +360,7 @@ const handleDelete = async (video: VideoItemUI) => {
       type: 'warning',
     })
 
-    const res = await VideoApi.deleteVideo(video.videoId)
+    const res = await VideoApi.deleteVideo(video.videoId || 0)
     if (res.ok) {
       ElMessage.success('删除成功')
       loadVideos()
@@ -386,7 +380,7 @@ const handleDetect = async (video: VideoItemUI) => {
   video.progress = 0
 
   try {
-    const res = await VideoApi.detectVideo(video.videoId)
+    const res = await VideoApi.detectVideo(video.videoId || 0)
     if (res.ok) {
       ElMessage.success('已加入检测队列')
       // 开始轮询进度
@@ -405,7 +399,7 @@ const handleDetect = async (video: VideoItemUI) => {
 const pollProgress = async (video: VideoItemUI) => {
   const timer = setInterval(async () => {
     try {
-      const res = await VideoApi.getDetectProgress(video.videoId)
+      const res = await VideoApi.getDetectProgress(video.videoId || 0)
       if (res.ok) {
         video.progress = res.progress || 0
 
@@ -468,10 +462,6 @@ const onTimeUpdate = () => {
   } else {
     currentDetections.value = []
   }
-}
-
-const getBoxStyle = (box: VideoApi.DetectionBox) => {
-  return {}
 }
 
 const formatDuration = (seconds: number) => {
