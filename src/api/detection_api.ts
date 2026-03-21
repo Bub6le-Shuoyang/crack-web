@@ -211,3 +211,59 @@ export const detectSingle = async (file: File): Promise<SingleDetectResponse> =>
   })
   return response.data
 }
+
+// --- 视频接口 ---
+
+export interface VideoListResponse {
+  ok?: boolean
+  error?: boolean
+  message?: string
+  code?: string
+  data?: {
+    list: Record<string, unknown>[]
+    total: number
+    page: number
+    pageSize: number
+  }
+}
+
+export const uploadVideo = async (
+  file: File,
+  description?: string,
+  generateCover: boolean = true,
+) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (description) {
+    formData.append('description', description)
+  }
+  formData.append('generateCover', String(generateCover))
+
+  const response = await apiClient.post('/api/file/upload-video', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    // 可选：添加上传进度监控
+    // onUploadProgress: progressEvent => { ... }
+  })
+  return response.data
+}
+
+export const listVideos = async (params?: {
+  page?: number
+  pageSize?: number
+  fileType?: string
+}): Promise<VideoListResponse> => {
+  const response = await apiClient.get<VideoListResponse>('/api/file/list-videos', { params })
+  return response.data
+}
+
+export const deleteVideo = async (videoId: number | string) => {
+  const response = await apiClient.delete(`/api/file/delete-video/${videoId}`)
+  return response.data
+}
+
+export const detectVideo = async (videoId: number | string) => {
+  const response = await apiClient.post(`/model/detectVideo/${videoId}`)
+  return response.data
+}
