@@ -1,7 +1,18 @@
 <template>
   <div class="page-container" v-loading="loading">
     <div class="header-section">
-      <h2>数据统计仪表盘</h2>
+      <div class="title-with-refresh">
+        <h2>数据统计仪表盘</h2>
+        <el-button 
+          type="primary" 
+          :icon="RefreshRight" 
+          circle 
+          size="small"
+          @click="refreshAllData"
+          :loading="refreshing"
+          title="刷新数据"
+        />
+      </div>
       <div class="filter-section" v-if="isAdmin">
         <el-date-picker
           v-model="dateRange"
@@ -39,7 +50,7 @@
         <RealtimeDashboard :realtime-data="realtimeData" @refresh="loadRealtimeData" />
       </el-tab-pane>
       <el-tab-pane label="个人统计" name="personal">
-        <PersonalStats :personal-data="personalData" />
+        <PersonalStats :personal-data="personalData" :raw-data="rawData" />
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -48,6 +59,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { RefreshRight } from '@element-plus/icons-vue'
 import * as StatsApi from '@/api/statistics_api'
 import ImageStats from './components/ImageStats.vue'
 import VideoStats from './components/VideoStats.vue'
@@ -71,6 +83,7 @@ const isAdmin = computed(() => {
 })
 
 const loading = ref(false)
+const refreshing = ref(false)
 const dateRange = ref<[string, string] | null>(null)
 const activeTab = ref('image')
 
@@ -100,6 +113,14 @@ const realtimeData = ref<Record<string, unknown>>({})
 
 // 个人统计数据状态
 const personalData = ref<Record<string, unknown>>({})
+
+const rawData = ref<{
+  recentImageDetections: Record<string, unknown>[]
+  recentVideoDetections: Record<string, unknown>[]
+}>({
+  recentImageDetections: [],
+  recentVideoDetections: []
+})
 
 // 加载图片统计数据
 const loadImageData = async () => {
@@ -191,8 +212,12 @@ const loadRealtimeData = async () => {
 const loadPersonalData = async () => {
   try {
     const res = await StatsApi.getPersonalStats()
+    console.log('Personal stats response:', res)
     if (res.ok && res.data) {
       personalData.value = res.data
+      console.log('Personal data loaded:', personalData.value)
+    } else {
+      console.warn('Personal stats response not ok or no data:', res)
     }
   } catch (error) {
     console.error('Failed to load personal data:', error)
@@ -236,6 +261,21 @@ const loadData = async () => {
   }
 }
 
+// 刷新所有数据
+const refreshAllData = async () => {
+  refreshing.value = true
+  try {
+    // 根据当前 Tab 刷新对应数据
+    await handleTabChange(activeTab.value)
+    ElMessage.success('数据已刷新')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('刷新数据失败')
+  } finally {
+    refreshing.value = false
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -253,6 +293,16 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+}
+
+.title-with-refresh {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-with-refresh h2 {
+  margin: 0;
 }
 
 .header-section h2 {

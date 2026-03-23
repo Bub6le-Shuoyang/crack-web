@@ -99,23 +99,116 @@
       <h4>近7天活动趋势</h4>
       <v-chart class="chart" :option="activityChartOption" autoresize />
     </div>
+
+    <!-- 原始数据表格 -->
+    <div class="raw-data-section" v-loading="rawDataLoading">
+      <h4>原始数据</h4>
+      
+      <!-- 最近图片检测记录 -->
+      <div class="raw-data-table">
+        <h5>最近图片检测记录 (最近10条)</h5>
+        <el-table :data="rawData.recentImageDetections || []" stripe style="width: 100%" size="small">
+          <el-table-column prop="fileName" label="文件名" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="uploaderName" label="上传者" width="100" />
+          <el-table-column prop="fileSizeFormatted" label="大小" width="80" />
+          <el-table-column label="检测状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="row.isDetected ? 'success' : 'info'" size="small">
+                {{ row.isDetected ? '已检测' : '未检测' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="异常情况" width="120">
+            <template #default="{ row }">
+              <template v-if="row.isDetected">
+                <el-tag :type="row.anomalyCount > 0 ? 'danger' : 'success'" size="small">
+                  {{ row.anomalyCount > 0 ? `异常 ${row.anomalyCount}` : '正常' }}
+                </el-tag>
+              </template>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="最高置信度异常" width="140">
+            <template #default="{ row }">
+              <template v-if="row.isDetected && row.topAnomalyLabel">
+                <span>{{ row.topAnomalyLabel }}</span>
+                <span v-if="row.topAnomalyScore" class="score-text">
+                  ({{ (row.topAnomalyScore * 100).toFixed(1) }}%)
+                </span>
+              </template>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createdAt" label="上传时间" width="160">
+            <template #default="{ row }">
+              {{ formatDateTime(row.createdAt) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 最近视频检测记录 -->
+      <div class="raw-data-table">
+        <h5>最近视频检测记录 (最近3条)</h5>
+        <el-table :data="rawData.recentVideoDetections || []" stripe style="width: 100%" size="small">
+          <el-table-column prop="fileName" label="文件名" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="uploaderName" label="上传者" width="100" />
+          <el-table-column prop="fileSizeFormatted" label="大小" width="80" />
+          <el-table-column label="检测状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="row.isDetected ? 'success' : 'info'" size="small">
+                {{ row.isDetected ? '已检测' : '未检测' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="异常情况" width="130">
+            <template #default="{ row }">
+              <template v-if="row.isDetected">
+                <el-tag :type="row.anomalyCount > 0 ? 'danger' : 'success'" size="small">
+                  {{ row.anomalyCount > 0 ? `异常 ${row.anomalyCount} 帧` : '正常' }}
+                </el-tag>
+                <span v-if="row.anomalyRate > 0" class="rate-text">
+                  ({{ (row.anomalyRate * 100).toFixed(1) }}%)
+                </span>
+              </template>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createdAt" label="上传时间" width="160">
+            <template #default="{ row }">
+              {{ formatDateTime(row.createdAt) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import { Picture, VideoCamera, FolderOpened, Search, WarningFilled, TrendCharts } from '@element-plus/icons-vue'
+import * as StatsApi from '@/api/statistics_api'
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
 const props = defineProps<{
   personalData: Record<string, unknown>
 }>()
+
+const rawDataLoading = ref(false)
+const rawData = ref<{
+  recentImageDetections: Record<string, unknown>[]
+  recentVideoDetections: Record<string, unknown>[]
+}>({
+  recentImageDetections: [],
+  recentVideoDetections: []
+})
 
 const getPercentage = (detected: unknown, total: unknown) => {
   const d = (detected as number) || 0
@@ -124,12 +217,42 @@ const getPercentage = (detected: unknown, total: unknown) => {
   return Math.round((d / t) * 100)
 }
 
+const formatDateTime = (dateStr: string | null) => {
+  if (!dateStr) return '-'
+  try {
+    const date = new Date(dateStr)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return dateStr
+  }
+}
+
+const loadRawData = async () => {
+  rawDataLoading.value = true
+  try {
+    const res = await StatsApi.getRawDetectionData()
+    if (res.ok && res.data) {
+      rawData.value = res.data as typeof rawData.value
+    }
+  } catch (error) {
+    console.error('Failed to load raw detection data:', error)
+  } finally {
+    rawDataLoading.value = false
+  }
+}
+
 const activityChartOption = computed(() => {
   const activity = (props.personalData.recentActivity as Record<string, unknown>[]) || []
   return {
     tooltip: { trigger: 'axis' },
-    legend: { data: ['上传数', '检测数'] },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    legend: { data: ['上传数', '检测数'], top: '5%', right: '5%' },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '15%', containLabel: true },
     xAxis: { type: 'category', data: activity.map((d) => d.date) },
     yAxis: { type: 'value' },
     series: [
@@ -149,6 +272,13 @@ const activityChartOption = computed(() => {
     ],
   }
 })
+
+// 监听 personalData 变化，加载原始数据
+watch(() => props.personalData, (newVal) => {
+  if (newVal && Object.keys(newVal).length > 0) {
+    loadRawData()
+  }
+}, { immediate: true, deep: true })
 </script>
 
 <style scoped>
@@ -236,5 +366,43 @@ const activityChartOption = computed(() => {
 .chart {
   height: 250px;
   width: 100%;
+}
+
+/* 原始数据样式 */
+.raw-data-section {
+  background: #fafafa;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.raw-data-section h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.raw-data-table {
+  margin-bottom: 20px;
+}
+
+.raw-data-table:last-child {
+  margin-bottom: 0;
+}
+
+.raw-data-table h5 {
+  margin: 0 0 10px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.score-text {
+  color: #999;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.rate-text {
+  color: #999;
+  font-size: 12px;
+  margin-left: 4px;
 }
 </style>

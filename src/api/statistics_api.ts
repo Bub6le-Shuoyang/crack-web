@@ -325,3 +325,45 @@ export const getAnomalyTimeAnalysis = async (): Promise<AnomalyTimeAnalysisRespo
   )
   return response.data
 }
+
+// 3.7 原始检测数据
+export interface RawDetectionDataResponse {
+  ok?: boolean
+  data?: {
+    recentImageDetections: {
+      id: number
+      fileName: string
+      fileSize: number
+      fileSizeFormatted: string
+      createdAt: string | null
+      uploaderId: number
+      uploaderName: string
+      isDetected: boolean
+      detectionCount: number
+      anomalyCount: number
+      topAnomalyLabel?: string
+      topAnomalyScore?: number
+    }[]
+    recentVideoDetections: {
+      id: number
+      fileName: string
+      fileSize: number
+      fileSizeFormatted: string
+      duration: number
+      createdAt: string | null
+      uploaderId: number
+      uploaderName: string
+      isDetected: boolean
+      anomalyCount: number
+      totalFrames: number
+      anomalyRate: number
+    }[]
+  }
+  error?: boolean
+  message?: string
+}
+
+export const getRawDetectionData = async (): Promise<RawDetectionDataResponse> => {
+  const response = await apiClient.get<RawDetectionDataResponse>('/api/statistics/raw-data')
+  return response.data
+}
