@@ -16,8 +16,8 @@
       </div>
     </div>
 
-    <!-- 数据分析 Tab 切换 -->
-    <el-tabs v-model="activeTab" class="main-tabs" @tab-change="handleTabChange">
+    <!-- Tab 切换 -->
+    <el-tabs v-model="activeTab" class="stats-tabs" @tab-change="handleTabChange">
       <el-tab-pane label="图片统计" name="image">
         <ImageStats
           :overview-data="overviewData"
@@ -56,7 +56,6 @@ import TimeAnalysis from './components/TimeAnalysis.vue'
 import RealtimeDashboard from './components/RealtimeDashboard.vue'
 import PersonalStats from './components/PersonalStats.vue'
 
-// 简化判断：您可以根据实际项目逻辑替换这里的 isAdmin 判断
 const isAdmin = computed(() => {
   const userInfo = localStorage.getItem('userInfo')
   if (userInfo) {
@@ -74,7 +73,7 @@ const loading = ref(false)
 const dateRange = ref<[string, string] | null>(null)
 const activeTab = ref('image')
 
-// 图片统计数据状态
+// 数据状态
 const overviewData = ref({
   totalImages: 0,
   totalAnomalyImages: 0,
@@ -82,124 +81,87 @@ const overviewData = ref({
   dailyTrend: [] as Record<string, unknown>[],
   topAnomalyType: [] as Record<string, unknown>[],
 })
+
 const adminData = ref<Record<string, unknown>>({})
 const confDistribution = ref<Record<string, unknown>[]>([])
-
-// 视频统计数据状态
 const videoOverview = ref<Record<string, unknown>>({})
-
-// 存储分析数据状态
 const storageData = ref<Record<string, unknown>>({})
 const fileTypes = ref<Record<string, unknown>>({})
-
-// 时段分析数据状态
 const timeAnalysis = ref<Record<string, unknown>>({})
-
-// 实时监控数据状态（管理员）
 const realtimeData = ref<Record<string, unknown>>({})
-
-// 个人统计数据状态
 const personalData = ref<Record<string, unknown>>({})
 
-// 加载图片统计数据
+// 加载图片相关数据
 const loadImageData = async () => {
-  try {
-    const startDate = dateRange.value?.[0]
-    const endDate = dateRange.value?.[1]
+  const startDate = dateRange.value?.[0]
+  const endDate = dateRange.value?.[1]
 
-    // 1. 获取图片概览
-    const overviewRes = await StatsApi.getImageOverview()
-    if (overviewRes.ok && overviewRes.data) {
-      overviewData.value = overviewRes.data
-    }
+  const overviewRes = await StatsApi.getImageOverview()
+  if (overviewRes.ok && overviewRes.data) {
+    overviewData.value = overviewRes.data
+  }
 
-    // 2. 获取异常分布和置信度分布
-    const distRes = await StatsApi.getAnomalyTypeDistribution({ startDate, endDate })
-    if (distRes.ok && distRes.data) {
-      confDistribution.value = distRes.data.confidenceDistribution || []
-    }
+  const distRes = await StatsApi.getAnomalyTypeDistribution({ startDate, endDate })
+  if (distRes.ok && distRes.data) {
+    confDistribution.value = distRes.data.confidenceDistribution || []
+  }
 
-    // 3. 如果是管理员，获取全局汇总
-    if (isAdmin.value) {
-      const adminRes = await StatsApi.getAdminTotalOverview({ startDate, endDate })
-      if (adminRes.ok && adminRes.data) {
-        adminData.value = adminRes.data
-      }
+  if (isAdmin.value) {
+    const adminRes = await StatsApi.getAdminTotalOverview({ startDate, endDate })
+    if (adminRes.ok && adminRes.data) {
+      adminData.value = adminRes.data
     }
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('获取图片统计数据失败')
   }
 }
 
 // 加载视频数据
 const loadVideoData = async () => {
-  try {
-    const res = await StatsApi.getVideoOverview()
-    if (res.ok && res.data) {
-      videoOverview.value = res.data
-    }
-  } catch (error) {
-    console.error('Failed to load video data:', error)
+  const res = await StatsApi.getVideoOverview()
+  if (res.ok && res.data) {
+    videoOverview.value = res.data
   }
 }
 
 // 加载存储数据
 const loadStorageData = async () => {
-  try {
-    const [storageRes, fileTypesRes] = await Promise.all([
-      StatsApi.getStorageStats(),
-      StatsApi.getFileTypeDistribution(),
-    ])
-    if (storageRes.ok && storageRes.data) {
-      storageData.value = storageRes.data
-    }
-    if (fileTypesRes.ok && fileTypesRes.data) {
-      fileTypes.value = fileTypesRes.data
-    }
-  } catch (error) {
-    console.error('Failed to load storage data:', error)
+  const [storageRes, fileTypesRes] = await Promise.all([
+    StatsApi.getStorageStats(),
+    StatsApi.getFileTypeDistribution(),
+  ])
+  if (storageRes.ok && storageRes.data) {
+    storageData.value = storageRes.data
+  }
+  if (fileTypesRes.ok && fileTypesRes.data) {
+    fileTypes.value = fileTypesRes.data
   }
 }
 
 // 加载时段分析
 const loadTimeAnalysis = async () => {
-  try {
-    const res = await StatsApi.getAnomalyTimeAnalysis()
-    if (res.ok && res.data) {
-      timeAnalysis.value = res.data
-    }
-  } catch (error) {
-    console.error('Failed to load time analysis:', error)
+  const res = await StatsApi.getAnomalyTimeAnalysis()
+  if (res.ok && res.data) {
+    timeAnalysis.value = res.data
   }
 }
 
 // 加载实时数据（管理员）
 const loadRealtimeData = async () => {
   if (!isAdmin.value) return
-  try {
-    const res = await StatsApi.getRealtimeDashboard()
-    if (res.ok && res.data) {
-      realtimeData.value = res.data
-    }
-  } catch (error) {
-    console.error('Failed to load realtime data:', error)
+  const res = await StatsApi.getRealtimeDashboard()
+  if (res.ok && res.data) {
+    realtimeData.value = res.data
   }
 }
 
 // 加载个人数据
 const loadPersonalData = async () => {
-  try {
-    const res = await StatsApi.getPersonalStats()
-    if (res.ok && res.data) {
-      personalData.value = res.data
-    }
-  } catch (error) {
-    console.error('Failed to load personal data:', error)
+  const res = await StatsApi.getPersonalStats()
+  if (res.ok && res.data) {
+    personalData.value = res.data
   }
 }
 
-// 根据 Tab 加载数据
+// 根据Tab加载数据
 const handleTabChange = async (tab: string) => {
   switch (tab) {
     case 'image':
@@ -223,7 +185,7 @@ const handleTabChange = async (tab: string) => {
   }
 }
 
-// 加载数据
+// 主加载函数
 const loadData = async () => {
   loading.value = true
   try {
@@ -259,7 +221,7 @@ onMounted(() => {
   margin: 0;
 }
 
-.main-tabs {
+.stats-tabs {
   background: white;
   padding: 20px;
   border-radius: 8px;
