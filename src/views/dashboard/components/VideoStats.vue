@@ -28,7 +28,9 @@
         <div class="card-content">
           <h4>异常视频数</h4>
           <p class="number danger">{{ videoOverview.anomalyVideos || 0 }}</p>
-          <span class="sub-text">异常率: {{ ((videoOverview.anomalyVideoRate as number) * 100 || 0).toFixed(1) }}%</span>
+          <span class="sub-text"
+            >异常率: {{ ((videoOverview.anomalyVideoRate as number) * 100 || 0).toFixed(1) }}%</span
+          >
         </div>
       </div>
     </div>
@@ -53,14 +55,14 @@
       <div class="efficiency-metrics">
         <div class="metric-item">
           <span class="metric-label">平均异常时间占比</span>
-          <span class="metric-value">{{ ((videoOverview.avgAnomalyTimeRatio as number) * 100 || 0).toFixed(2) }}%</span>
+          <span class="metric-value"
+            >{{ ((videoOverview.avgAnomalyTimeRatio as number) * 100 || 0).toFixed(2) }}%</span
+          >
           <span class="metric-desc">平均每个视频中异常帧占总帧数的比例</span>
         </div>
         <div class="metric-item">
           <span class="metric-label">检测覆盖率</span>
-          <span class="metric-value">
-            {{ getDetectionRate() }}%
-          </span>
+          <span class="metric-value"> {{ getDetectionRate() }}% </span>
           <span class="metric-desc">已检测视频占总视频的比例</span>
         </div>
       </div>
@@ -73,11 +75,25 @@ import { computed } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { PieChart, LineChart, BarChart } from 'echarts/charts'
-import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+} from 'echarts/components'
 import VChart from 'vue-echarts'
 import { VideoCamera, Timer, Search, WarningFilled } from '@element-plus/icons-vue'
 
-use([CanvasRenderer, PieChart, LineChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
+use([
+  CanvasRenderer,
+  PieChart,
+  LineChart,
+  BarChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+])
 
 const props = defineProps<{
   videoOverview: Record<string, unknown>
@@ -93,6 +109,22 @@ const getDetectionRate = () => {
 
 // 饼图配置
 const pieChartOption = computed(() => {
+  const getMappedLabel = (label: string) => {
+    const map: Record<string, string> = {
+      P0: '纵向裂缝',
+      P1: '横向裂缝',
+      P2: '龟裂',
+      P3: '坑洞',
+      P4: '坑洞',
+      p0: '纵向裂缝',
+      p1: '横向裂缝',
+      p2: '龟裂',
+      p3: '坑洞',
+      p4: '坑洞',
+    }
+    return map[label] || label
+  }
+
   const types = (props.videoOverview.topAnomalyTypes as Record<string, unknown>[]) || []
   if (types.length === 0) {
     return { title: { text: '暂无异常数据', left: 'center', top: 'center' }, series: [] }
@@ -110,7 +142,7 @@ const pieChartOption = computed(() => {
         emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
         data: types.map((t) => ({
           value: t.count,
-          name: t.label,
+          name: getMappedLabel(t.label as string),
         })),
       },
     ],

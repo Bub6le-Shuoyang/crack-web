@@ -63,10 +63,24 @@ import { computed } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, PieChart, BarChart } from 'echarts/charts'
-import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+} from 'echarts/components'
 import VChart from 'vue-echarts'
 
-use([CanvasRenderer, LineChart, PieChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
+use([
+  CanvasRenderer,
+  LineChart,
+  PieChart,
+  BarChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+])
 
 const props = defineProps<{
   overviewData: {
@@ -114,8 +128,24 @@ const trendChartOption = computed(() => {
 
 // 饼图配置
 const pieChartOption = computed(() => {
+  const getMappedLabel = (label: string) => {
+    const map: Record<string, string> = {
+      P0: '纵向裂缝',
+      P1: '横向裂缝',
+      P2: '龟裂',
+      P3: '坑洞',
+      P4: '坑洞',
+      p0: '纵向裂缝',
+      p1: '横向裂缝',
+      p2: '龟裂',
+      p3: '坑洞',
+      p4: '坑洞',
+    }
+    return map[label] || label
+  }
+
   const data = props.overviewData.topAnomalyType.map((t) => ({
-    name: t.label,
+    name: getMappedLabel(t.label as string),
     value: t.count,
   }))
 

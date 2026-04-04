@@ -197,9 +197,13 @@
                 top: (box.y / videoOriginalHeight) * 100 + '%',
                 width: (box.width / videoOriginalWidth) * 100 + '%',
                 height: (box.height / videoOriginalHeight) * 100 + '%',
+                borderColor: getBoxColor(box.label),
+                backgroundColor: getBoxBgColor(box.label),
               }"
             >
-              <span class="box-label">{{ box.label }} {{ (box.score * 100).toFixed(1) }}%</span>
+              <span class="box-label" :style="{ backgroundColor: getBoxColor(box.label) }"
+                >{{ getMappedLabel(box.label) }} {{ (box.score * 100).toFixed(1) }}%</span
+              >
             </div>
           </div>
         </div>
@@ -224,8 +228,8 @@
             <el-table-column label="检测结果">
               <template #default="scope">
                 <div v-for="(det, idx) in scope.row.detections" :key="idx" class="detection-tag">
-                  <el-tag size="small" type="danger">
-                    {{ det.label }} ({{ (det.score * 100).toFixed(1) }}%)
+                  <el-tag size="small" :type="getTagType(det.label)">
+                    {{ getMappedLabel(det.label) }} ({{ (det.score * 100).toFixed(1) }}%)
                   </el-tag>
                 </div>
               </template>
@@ -255,6 +259,39 @@ import * as VideoApi from '@/api/video_api'
 import type { UploadRequestOptions } from 'element-plus'
 
 const API_BASE_URL = 'http://127.0.0.1:7022'
+
+// --- 标签映射和样式函数 ---
+const getMappedLabel = (label: string) => {
+  const map: Record<string, string> = {
+    P0: '纵向裂缝', 'P1': '横向裂缝', 'P2': '龟裂', 'P3': '坑洞', 'P4': '坑洞',
+    p0: '纵向裂缝', 'p1': '横向裂缝', 'p2': '龟裂', 'p3': '坑洞', 'p4': '坑洞'
+  }
+  return map[label] || label
+}
+
+const getBoxColor = (label: string) => {
+  const map: Record<string, string> = {
+    P0: '#f56c6c', 'P1': '#409eff', 'P2': '#67c23a', 'P3': '#e6a23c', 'P4': '#e6a23c',
+    p0: '#f56c6c', 'p1': '#409eff', 'p2': '#67c23a', 'p3': '#e6a23c', 'p4': '#e6a23c'
+  }
+  return map[label] || '#f56c6c'
+}
+
+const getBoxBgColor = (label: string) => {
+  const map: Record<string, string> = {
+    P0: 'rgba(245, 108, 108, 0.1)', 'P1': 'rgba(64, 158, 255, 0.1)', 'P2': 'rgba(103, 194, 58, 0.1)', 'P3': 'rgba(230, 162, 60, 0.1)', 'P4': 'rgba(230, 162, 60, 0.1)',
+    p0: 'rgba(245, 108, 108, 0.1)', 'p1': 'rgba(64, 158, 255, 0.1)', 'p2': 'rgba(103, 194, 58, 0.1)', 'p3': 'rgba(230, 162, 60, 0.1)', 'p4': 'rgba(230, 162, 60, 0.1)'
+  }
+  return map[label] || 'rgba(245, 108, 108, 0.1)'
+}
+
+const getTagType = (label: string) => {
+  const map: Record<string, 'danger' | 'primary' | 'success' | 'warning'> = {
+    P0: 'danger', 'P1': 'primary', 'P2': 'success', 'P3': 'warning', 'P4': 'warning',
+    p0: 'danger', 'p1': 'primary', 'p2': 'success', 'p3': 'warning', 'p4': 'warning'
+  }
+  return map[label] || 'danger'
+}
 
 interface VideoItemUI extends VideoApi.VideoItem {
   date: string

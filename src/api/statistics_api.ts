@@ -312,9 +312,7 @@ export const getFileTypeDistribution = async (): Promise<FileTypeDistributionRes
 
 // 3.5 实时监控面板（管理员）
 export const getRealtimeDashboard = async (): Promise<RealtimeDashboardResponse> => {
-  const response = await apiClient.get<RealtimeDashboardResponse>(
-    '/api/statistics/admin/realtime',
-  )
+  const response = await apiClient.get<RealtimeDashboardResponse>('/api/statistics/admin/realtime')
   return response.data
 }
 
@@ -365,5 +363,31 @@ export interface RawDetectionDataResponse {
 
 export const getRawDetectionData = async (): Promise<RawDetectionDataResponse> => {
   const response = await apiClient.get<RawDetectionDataResponse>('/api/statistics/raw-data')
+  return response.data
+}
+
+// 3.8 位置统计数据
+export interface LocationStatsResponse {
+  ok?: boolean
+  data?: {
+    totalLocations: number
+    locations: {
+      imageId: number
+      latitude: number
+      longitude: number
+      address: string
+      fileName: string
+      userId?: number
+      userName?: string
+      isDetected: boolean
+      hasAnomaly: boolean
+    }[]
+  }
+  error?: boolean
+  message?: string
+}
+
+export const getLocationStats = async (): Promise<LocationStatsResponse> => {
+  const response = await apiClient.get<LocationStatsResponse>('/api/statistics/location-stats')
   return response.data
 }

@@ -111,7 +111,9 @@
                   v-if="img.status === 'detected' && img.results && img.results.length > 0"
                   class="detection-label-overlay"
                 >
-                  {{ Array.from(new Set(img.results.map((r) => r.label))).join(', ') }}
+                  {{
+                    Array.from(new Set(img.results.map((r) => getMappedLabel(r.label)))).join(', ')
+                  }}
                 </div>
 
                 <el-image
@@ -220,6 +222,18 @@
             <el-descriptions-item label="使用模型">{{
               currentImage.modelName || 'Unknown'
             }}</el-descriptions-item>
+            <el-descriptions-item label="位置信息">
+              <el-button
+                v-if="currentImage.location"
+                type="primary"
+                link
+                size="small"
+                @click="showMapDialog = true"
+              >
+                <el-icon><Location /></el-icon> {{ currentImage.location.address || '查看地图' }}
+              </el-button>
+              <span v-else>无位置信息</span>
+            </el-descriptions-item>
           </el-descriptions>
         </div>
 
@@ -254,9 +268,13 @@
                 top: (box.y / (currentImage.height || 640)) * 100 + '%',
                 width: (box.width / (currentImage.width || 640)) * 100 + '%',
                 height: (box.height / (currentImage.height || 640)) * 100 + '%',
+                borderColor: getBoxColor(box.label),
+                backgroundColor: getBoxBgColor(box.label),
               }"
             >
-              <span class="box-label">{{ box.label }} {{ (box.score * 100).toFixed(1) }}%</span>
+              <span class="box-label" :style="{ backgroundColor: getBoxColor(box.label) }"
+                >{{ getMappedLabel(box.label) }} {{ (box.score * 100).toFixed(1) }}%</span
+              >
             </div>
           </div>
         </div>
@@ -264,7 +282,11 @@
         <div class="detail-info">
           <h3>检测结果列表</h3>
           <el-table :data="currentImage.results" stripe style="width: 100%" size="small" border>
-            <el-table-column prop="label" label="类别" width="100" />
+            <el-table-column label="类别" width="100">
+              <template #default="scope">
+                {{ getMappedLabel(scope.row.label) }}
+              </template>
+            </el-table-column>
             <el-table-column label="置信度" width="120">
               <template #default="scope"> {{ (scope.row.score * 100).toFixed(2) }}% </template>
             </el-table-column>
@@ -278,13 +300,53 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 地图弹窗 -->
+    <el-dialog
+      v-model="showMapDialog"
+      title="图片位置"
+      width="60%"
+      destroy-on-close
+      center
+      @opened="initMap"
+    >
+      <div style="width: 100%; height: 500px" v-if="currentImage?.location">
+        <div
+          id="amap-container"
+          style="width: 100%; height: 100%; border: 1px solid #ccc; border-radius: 4px"
+        ></div>
+        <div style="margin-top: 10px; text-align: center">
+          <small
+            >坐标: {{ currentImage.location.latitude.toFixed(6) }},
+            {{ currentImage.location.longitude.toFixed(6) }}</small
+          >
+          <div style="margin-top: 5px">
+            <a
+              :href="`https://uri.amap.com/marker?position=${currentImage.location.longitude},${currentImage.location.latitude}&name=拍摄位置`"
+              target="_blank"
+              style="color: #409eff; text-decoration: none"
+              >在全屏高德地图中查看</a
+            >
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Delete, Search, Aim, Check, View, Refresh } from '@element-plus/icons-vue'
+import {
+  Upload,
+  Delete,
+  Search,
+  Aim,
+  Check,
+  View,
+  Refresh,
+  Location,
+} from '@element-plus/icons-vue'
 import * as DetectionApi from '@/api/detection_api'
 import type { UploadFile } from 'element-plus/es/components/upload/src/upload'
 
@@ -299,6 +361,12 @@ interface DetectionResult {
   classId: number
 }
 
+interface LocationData {
+  latitude: number
+  longitude: number
+  address: string
+}
+
 interface ImageItem {
   id: number
   url: string
@@ -311,6 +379,56 @@ interface ImageItem {
   width?: number
   height?: number
   loading?: boolean
+  location?: LocationData | null
+}
+
+// --- 图片状态常量 ---
+const getMappedLabel = (label: string) => {
+  const map: Record<string, string> = {
+    P0: '纵向裂缝',
+    P1: '横向裂缝',
+    P2: '龟裂',
+    P3: '坑洞',
+    P4: '坑洞',
+    p0: '纵向裂缝',
+    p1: '横向裂缝',
+    p2: '龟裂',
+    p3: '坑洞',
+    p4: '坑洞',
+  }
+  return map[label] || label
+}
+
+const getBoxColor = (label: string) => {
+  const map: Record<string, string> = {
+    P0: '#f56c6c', // red
+    P1: '#409eff', // blue
+    P2: '#67c23a', // green
+    P3: '#e6a23c', // orange
+    P4: '#e6a23c', // orange
+    p0: '#f56c6c',
+    p1: '#409eff',
+    p2: '#67c23a',
+    p3: '#e6a23c',
+    p4: '#e6a23c',
+  }
+  return map[label] || '#f56c6c'
+}
+
+const getBoxBgColor = (label: string) => {
+  const map: Record<string, string> = {
+    P0: 'rgba(245, 108, 108, 0.1)',
+    P1: 'rgba(64, 158, 255, 0.1)',
+    P2: 'rgba(103, 194, 58, 0.1)',
+    P3: 'rgba(230, 162, 60, 0.1)',
+    P4: 'rgba(230, 162, 60, 0.1)',
+    p0: 'rgba(245, 108, 108, 0.1)',
+    p1: 'rgba(64, 158, 255, 0.1)',
+    p2: 'rgba(103, 194, 58, 0.1)',
+    p3: 'rgba(230, 162, 60, 0.1)',
+    p4: 'rgba(230, 162, 60, 0.1)',
+  }
+  return map[label] || 'rgba(245, 108, 108, 0.1)'
 }
 
 // 状态
@@ -320,6 +438,7 @@ const selectedLabel = ref('')
 const selectedImageIds = ref<number[]>([])
 const images = ref<ImageItem[]>([])
 const detailVisible = ref(false)
+const showMapDialog = ref(false)
 const currentImage = ref<ImageItem | null>(null)
 
 // 分页状态
@@ -371,9 +490,22 @@ const loadImages = async () => {
       list.forEach(async (item, index) => {
         try {
           const imageId = item.id || item.imageId || 0
-          const detailRes = await DetectionApi.getImageById(imageId)
+          const [detailRes, locationRes] = await Promise.all([
+            DetectionApi.getImageById(imageId),
+            DetectionApi.getImageLocation(imageId).catch(() => ({ ok: false, data: null })),
+          ])
+
           if (detailRes.ok && detailRes.data) {
             const detail = detailRes.data
+            let locationData = null
+            if (locationRes.ok && locationRes.data) {
+              locationData = {
+                latitude: locationRes.data.latitude,
+                longitude: locationRes.data.longitude,
+                address: locationRes.data.address || '未知位置',
+              }
+            }
+
             // 确保索引仍然匹配（如果页面已翻页，这可能会有问题，但在简单的 loadImages 中通常 OK）
             if (images.value[index] && images.value[index].id === imageId) {
               images.value[index] = {
@@ -386,6 +518,7 @@ const loadImages = async () => {
                 width: detail.width,
                 height: detail.height,
                 loading: false,
+                location: locationData,
               }
             }
           }
@@ -427,8 +560,28 @@ const handleFilterLabel = (label: string) => {
   loadImages()
 }
 
-// 计算属性 (移除旧的本地过滤)
-// const filteredImages = computed(() => { ... })
+const initMap = () => {
+  if (!currentImage.value?.location) return
+
+  const { latitude, longitude } = currentImage.value.location
+
+  // 确保 DOM 已渲染
+  setTimeout(() => {
+    // @ts-ignore
+    const map = new AMap.Map('amap-container', {
+      zoom: 15,
+      center: [longitude, latitude],
+    })
+
+    // @ts-ignore
+    const marker = new AMap.Marker({
+      position: [longitude, latitude],
+      title: '拍摄位置',
+    })
+
+    map.add(marker)
+  }, 100)
+}
 
 // 方法
 const handleUploadFile = async (file: UploadFile) => {

@@ -140,6 +140,21 @@ export type BatchDetectResponse = Record<string, DetectionBox[]>
 // 单张检测响应 (旧接口返回数组)
 export type SingleDetectResponse = DetectionBox[]
 
+// 位置信息响应
+export interface LocationResponse {
+  ok?: boolean
+  message?: string
+  data?: {
+    id: number
+    imageId: number
+    latitude: number
+    longitude: number
+    address: string
+    createdAt: string
+  }
+  error?: boolean
+}
+
 // --- API 方法 ---
 
 // 1. 上传图片
@@ -196,6 +211,12 @@ export const batchDeleteImages = async (imageIds: number[]): Promise<BatchDelete
 // 7. 批量检测
 export const detectBatch = async (imageIds: number[]): Promise<BatchDetectResponse> => {
   const response = await apiClient.post<BatchDetectResponse>('/model/detectBatch', { imageIds })
+  return response.data
+}
+
+// 8. 获取图片位置信息
+export const getImageLocation = async (imageId: number): Promise<LocationResponse> => {
+  const response = await apiClient.get<LocationResponse>(`/api/location/get/${imageId}`)
   return response.data
 }
 

@@ -39,7 +39,13 @@
         <RealtimeDashboard :realtime-data="realtimeData" @refresh="loadRealtimeData" />
       </el-tab-pane>
       <el-tab-pane label="个人统计" name="personal">
-        <PersonalStats :personal-data="personalData" />
+        <PersonalStats
+          :personal-data="personalData"
+          :raw-data="{ recentImageDetections: [], recentVideoDetections: [] }"
+        />
+      </el-tab-pane>
+      <el-tab-pane label="位置统计" name="location">
+        <LocationStats :location-data="locationData" />
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -55,6 +61,7 @@ import StorageStats from './components/StorageStats.vue'
 import TimeAnalysis from './components/TimeAnalysis.vue'
 import RealtimeDashboard from './components/RealtimeDashboard.vue'
 import PersonalStats from './components/PersonalStats.vue'
+import LocationStats from './components/LocationStats.vue'
 
 const isAdmin = computed(() => {
   const userInfo = localStorage.getItem('userInfo')
@@ -90,6 +97,7 @@ const fileTypes = ref<Record<string, unknown>>({})
 const timeAnalysis = ref<Record<string, unknown>>({})
 const realtimeData = ref<Record<string, unknown>>({})
 const personalData = ref<Record<string, unknown>>({})
+const locationData = ref<Record<string, unknown>>({})
 
 // 加载图片相关数据
 const loadImageData = async () => {
@@ -161,6 +169,14 @@ const loadPersonalData = async () => {
   }
 }
 
+// 加载位置数据
+const loadLocationData = async () => {
+  const res = await StatsApi.getLocationStats()
+  if (res.ok && res.data) {
+    locationData.value = res.data
+  }
+}
+
 // 根据Tab加载数据
 const handleTabChange = async (tab: string) => {
   switch (tab) {
@@ -181,6 +197,9 @@ const handleTabChange = async (tab: string) => {
       break
     case 'personal':
       await loadPersonalData()
+      break
+    case 'location':
+      await loadLocationData()
       break
   }
 }

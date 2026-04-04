@@ -3,10 +3,10 @@
     <div class="header-section">
       <div class="title-with-refresh">
         <h2>数据统计仪表盘</h2>
-        <el-button 
-          type="primary" 
-          :icon="RefreshRight" 
-          circle 
+        <el-button
+          type="primary"
+          :icon="RefreshRight"
+          circle
           size="small"
           @click="refreshAllData"
           :loading="refreshing"
@@ -52,6 +52,9 @@
       <el-tab-pane label="个人统计" name="personal">
         <PersonalStats :personal-data="personalData" :raw-data="rawData" />
       </el-tab-pane>
+      <el-tab-pane label="位置统计" name="location">
+        <LocationStats :location-data="locationData" />
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -67,6 +70,7 @@ import StorageStats from './components/StorageStats.vue'
 import TimeAnalysis from './components/TimeAnalysis.vue'
 import RealtimeDashboard from './components/RealtimeDashboard.vue'
 import PersonalStats from './components/PersonalStats.vue'
+import LocationStats from './components/LocationStats.vue'
 
 // 简化判断：您可以根据实际项目逻辑替换这里的 isAdmin 判断
 const isAdmin = computed(() => {
@@ -114,12 +118,15 @@ const realtimeData = ref<Record<string, unknown>>({})
 // 个人统计数据状态
 const personalData = ref<Record<string, unknown>>({})
 
+// 位置统计数据状态
+const locationData = ref<Record<string, unknown>>({})
+
 const rawData = ref<{
   recentImageDetections: Record<string, unknown>[]
   recentVideoDetections: Record<string, unknown>[]
 }>({
   recentImageDetections: [],
-  recentVideoDetections: []
+  recentVideoDetections: [],
 })
 
 // 加载图片统计数据
@@ -224,6 +231,18 @@ const loadPersonalData = async () => {
   }
 }
 
+// 加载位置数据
+const loadLocationData = async () => {
+  try {
+    const res = await StatsApi.getLocationStats()
+    if (res.ok && res.data) {
+      locationData.value = res.data
+    }
+  } catch (error) {
+    console.error('Failed to load location data:', error)
+  }
+}
+
 // 根据 Tab 加载数据
 const handleTabChange = async (tab: string) => {
   switch (tab) {
@@ -244,6 +263,9 @@ const handleTabChange = async (tab: string) => {
       break
     case 'personal':
       await loadPersonalData()
+      break
+    case 'location':
+      await loadLocationData()
       break
   }
 }

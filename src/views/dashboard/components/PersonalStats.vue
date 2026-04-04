@@ -42,7 +42,9 @@
       <div class="metric-card">
         <el-icon :size="28" color="#faad14"><TrendCharts /></el-icon>
         <div class="metric-info">
-          <span class="metric-value">{{ ((personalData.anomalyRate as number) * 100 || 0).toFixed(1) }}%</span>
+          <span class="metric-value"
+            >{{ ((personalData.anomalyRate as number) * 100 || 0).toFixed(1) }}%</span
+          >
           <span class="metric-label">异常率</span>
         </div>
       </div>
@@ -103,13 +105,19 @@
     <!-- 原始数据表格 -->
     <div class="raw-data-section" v-loading="rawDataLoading">
       <h4>原始数据</h4>
-      
+
       <!-- 最近图片检测记录 -->
       <div class="raw-data-table">
         <h5>最近图片检测记录 (最近10条)</h5>
-        <el-table :data="rawData.recentImageDetections || []" stripe style="width: 100%" size="small">
+        <el-table
+          :data="rawData.recentImageDetections || []"
+          stripe
+          style="width: 100%"
+          size="small"
+        >
           <el-table-column prop="fileName" label="文件名" min-width="150" show-overflow-tooltip />
           <el-table-column prop="uploaderName" label="上传者" width="100" />
+          <!-- el-table-column label="类别" width="100" mapped -->
           <el-table-column prop="fileSizeFormatted" label="大小" width="80" />
           <el-table-column label="检测状态" width="90">
             <template #default="{ row }">
@@ -131,7 +139,7 @@
           <el-table-column label="最高置信度异常" width="140">
             <template #default="{ row }">
               <template v-if="row.isDetected && row.topAnomalyLabel">
-                <span>{{ row.topAnomalyLabel }}</span>
+                <span>{{ getMappedLabel(row.topAnomalyLabel) }}</span>
                 <span v-if="row.topAnomalyScore" class="score-text">
                   ({{ (row.topAnomalyScore * 100).toFixed(1) }}%)
                 </span>
@@ -150,7 +158,12 @@
       <!-- 最近视频检测记录 -->
       <div class="raw-data-table">
         <h5>最近视频检测记录 (最近3条)</h5>
-        <el-table :data="rawData.recentVideoDetections || []" stripe style="width: 100%" size="small">
+        <el-table
+          :data="rawData.recentVideoDetections || []"
+          stripe
+          style="width: 100%"
+          size="small"
+        >
           <el-table-column prop="fileName" label="文件名" min-width="150" show-overflow-tooltip />
           <el-table-column prop="uploaderName" label="上传者" width="100" />
           <el-table-column prop="fileSizeFormatted" label="大小" width="80" />
@@ -192,7 +205,14 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
-import { Picture, VideoCamera, FolderOpened, Search, WarningFilled, TrendCharts } from '@element-plus/icons-vue'
+import {
+  Picture,
+  VideoCamera,
+  FolderOpened,
+  Search,
+  WarningFilled,
+  TrendCharts,
+} from '@element-plus/icons-vue'
 import * as StatsApi from '@/api/statistics_api'
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
@@ -207,7 +227,7 @@ const rawData = ref<{
   recentVideoDetections: Record<string, unknown>[]
 }>({
   recentImageDetections: [],
-  recentVideoDetections: []
+  recentVideoDetections: [],
 })
 
 const getPercentage = (detected: unknown, total: unknown) => {
@@ -215,6 +235,22 @@ const getPercentage = (detected: unknown, total: unknown) => {
   const t = (total as number) || 0
   if (t === 0) return 0
   return Math.round((d / t) * 100)
+}
+
+const getMappedLabel = (label: string) => {
+  const map: Record<string, string> = {
+    P0: '纵向裂缝',
+    P1: '横向裂缝',
+    P2: '龟裂',
+    P3: '坑洞',
+    P4: '坑洞',
+    p0: '纵向裂缝',
+    p1: '横向裂缝',
+    p2: '龟裂',
+    p3: '坑洞',
+    p4: '坑洞',
+  }
+  return map[label] || label
 }
 
 const formatDateTime = (dateStr: string | null) => {
@@ -226,7 +262,7 @@ const formatDateTime = (dateStr: string | null) => {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   } catch {
     return dateStr
@@ -274,11 +310,15 @@ const activityChartOption = computed(() => {
 })
 
 // 监听 personalData 变化，加载原始数据
-watch(() => props.personalData, (newVal) => {
-  if (newVal && Object.keys(newVal).length > 0) {
-    loadRawData()
-  }
-}, { immediate: true, deep: true })
+watch(
+  () => props.personalData,
+  (newVal) => {
+    if (newVal && Object.keys(newVal).length > 0) {
+      loadRawData()
+    }
+  },
+  { immediate: true, deep: true },
+)
 </script>
 
 <style scoped>
