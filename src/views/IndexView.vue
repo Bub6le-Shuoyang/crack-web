@@ -6,7 +6,7 @@
     <div class="orb orb-3"></div>
 
     <header class="header">
-      <div class="logo">Crack Project</div>
+      <div class="logo">途安智巡</div>
       <nav>
         <router-link to="/login" class="nav-link">登录</router-link>
       </nav>
@@ -14,14 +14,14 @@
 
     <main class="hero">
       <div class="hero-content">
-        <h1>道路异常检测系统</h1>
+        <h1>途安智巡系统</h1>
         <p>基于先进AI技术的道路安全监测解决方案</p>
         <button @click="handleStart" class="cta-button">立刻使用</button>
       </div>
     </main>
 
     <footer class="footer">
-      <p>&copy; 2026 Crack Project. All rights reserved.</p>
+      <p>&copy; 2026 途安智巡. All rights reserved.</p>
     </footer>
   </div>
 </template>

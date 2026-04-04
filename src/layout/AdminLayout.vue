@@ -3,7 +3,7 @@
     <!-- 侧边栏 -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h2>Crack Admin</h2>
+        <h2>途安智巡</h2>
       </div>
       <nav class="sidebar-nav">
         <router-link to="/dashboard/detection-image" class="nav-item" active-class="active">
